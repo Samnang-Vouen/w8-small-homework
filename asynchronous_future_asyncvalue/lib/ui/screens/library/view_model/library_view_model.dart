@@ -1,3 +1,4 @@
+import 'package:asynchronous_future_asyncvalue/ui/states/async_value.dart';
 import 'package:flutter/material.dart';
 import '../../../../data/repositories/songs/song_repository.dart';
 import '../../../states/player_state.dart';
@@ -6,7 +7,7 @@ import '../../../../model/songs/song.dart';
 class LibraryViewModel extends ChangeNotifier {
   final SongRepository songRepository;
   final PlayerState playerState;
-  List<Song>? _songs;
+  AsyncValue<List<Song>> _songs = AsyncValue.loading();
 
   LibraryViewModel({required this.songRepository, required this.playerState}) {
     playerState.addListener(notifyListeners);
@@ -15,8 +16,7 @@ class LibraryViewModel extends ChangeNotifier {
     _init();
   }
 
-  List<Song> get songs => _songs == null ? [] : _songs!;
-
+  AsyncValue<List<Song>> get songs => _songs;
   @override
   void dispose() {
     playerState.removeListener(notifyListeners);
@@ -25,7 +25,12 @@ class LibraryViewModel extends ChangeNotifier {
 
   void _init() async {
     // 1 - Fetch songs
-    _songs = await songRepository.fetchSongs();
+    try {
+      final fetchedSongs = await songRepository.fetchSongs();
+      _songs = AsyncValue.data(fetchedSongs);
+    } catch (e) {
+      _songs = AsyncValue.error(e);
+    }
 
     // 2 - notify listeners
     notifyListeners();
